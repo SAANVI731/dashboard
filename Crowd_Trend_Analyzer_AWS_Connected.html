@@ -1,0 +1,301 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crowd Trend Analyzer Dashboard</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:#f1f5f9;color:#1e293b}
+header{padding:24px;background:linear-gradient(120deg,#312e81,#0891b2);color:white}
+header h1{margin:0 0 8px}
+header p{margin:0}
+.layout{display:flex;min-height:calc(100vh - 90px)}
+nav{width:225px;background:white;padding:18px 12px;flex-shrink:0}
+nav button{display:block;width:100%;padding:14px;margin-bottom:8px;border:0;border-radius:8px;background:white;text-align:left;cursor:pointer;font-size:15px}
+nav button:hover,nav button.active{background:#4338ca;color:white}
+main{padding:24px;flex:1;min-width:0}
+.page{display:none}
+.page.active{display:block}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:15px}
+.card,.panel{background:white;padding:20px;border-radius:14px;box-shadow:0 4px 15px #00000009;margin-bottom:18px}
+.card p{color:#64748b;margin:0 0 12px}
+.number{font-size:30px;font-weight:bold}
+button.action{padding:12px 16px;margin:5px 5px 5px 0;border:0;border-radius:8px;background:#4338ca;color:white;cursor:pointer;font-weight:bold}
+button.action:hover{background:#3730a3}
+button.green{background:#059669}
+button.red{background:#dc2626}
+button.gray{background:#e2e8f0;color:#1e293b}
+button:focus-visible{outline:3px solid #06b6d4;outline-offset:2px}
+label{display:block;font-weight:bold;margin:12px 0}
+input{display:block;padding:11px;border:1px solid #cbd5e1;border-radius:7px;width:100%;max-width:250px;margin-top:6px}
+.bar{height:12px;background:#e2e8f0;border-radius:20px;overflow:hidden;margin:8px 0}
+.bar span{display:block;height:100%;background:#4f46e5}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+th,td{text-align:left;padding:12px;border-bottom:1px solid #e2e8f0}
+.small{font-size:13px;color:#64748b}
+#message{padding:10px 0;font-weight:bold;color:#4338ca}
+@media(max-width:650px){.layout{display:block}nav{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:5px}nav button{margin:0;font-size:13px}main{padding:14px}}
+</style>
+</head>
+<body>
+
+<header>
+<h1>📊 Crowd Trend Analyzer</h1>
+<p>Interactive Smart Visitor Counter Dashboard</p>
+<p class="small" id="connectionStatus" style="color:#e0f2fe;margin-top:8px">Connecting to AWS...</p>
+</header>
+
+<div class="layout">
+<nav>
+<button class="active" onclick="showPage('overview',this)">🏠 Overview</button>
+<button onclick="showPage('trends',this)">📈 Crowd Trends</button>
+<button onclick="showPage('reports',this)">📋 Visitor Reports</button>
+<button onclick="showPage('settings',this)">⚙️ Settings</button>
+</nav>
+
+<main>
+<section class="page active" id="overview">
+<h2>Dashboard Overview</h2>
+<div class="cards">
+<div class="card"><p>Today's Visitors</p><div class="number" id="today">—</div></div>
+<div class="card"><p>Visitors Inside</p><div class="number" id="inside">—</div></div>
+<div class="card"><p>Yesterday's Visitors</p><div class="number" id="yesterday">—</div></div>
+<div class="card"><p>Traffic Change</p><div class="number" id="change">—</div><p id="direction">Waiting for AWS data</p></div>
+</div>
+
+<div class="panel">
+<h3>🎛️ Visitor Control Center</h3>
+<p>Use these buttons to update visitor activity.</p>
+<button class="action green" onclick="addVisitor()">➕ Add Visitor</button>
+<button class="action red" onclick="removeVisitor()">➖ Record Exit</button>
+<button class="action" onclick="compareTrend()">📈 Compare Trend</button>
+<button class="action gray" onclick="undoAction()">↩ Undo Last Action</button>
+<button class="action gray" onclick="announceStatus()">🔊 Announce Status</button>
+<p id="message">Ready! Choose an action above.</p>
+</div>
+
+<div class="panel">
+<h3>Today's Crowd Level</h3>
+<div class="bar"><span id="capacityBar" style="width:0%"></span></div>
+<p id="capacityText">Waiting for AWS data.</p>
+</div>
+</section>
+
+<section class="page" id="trends">
+<h2>📈 Crowd Trends</h2>
+<div class="panel">
+<p>Click the buttons to explore visitor traffic.</p>
+<button class="action" onclick="showTrend('today')">Today</button>
+<button class="action" onclick="showTrend('week')">Last 7 Days</button>
+<button class="action" onclick="showTrend('peak')">Find Busiest Day</button>
+<div id="trendResult"></div>
+<div id="trendBars"></div>
+</div>
+</section>
+
+<section class="page" id="reports">
+<h2>📋 Visitor Reports</h2>
+<div class="panel">
+<button class="action" onclick="renderReport()">🔄 Refresh Report</button>
+<button class="action green" onclick="downloadCSV()">⬇ Download CSV</button>
+<table>
+<thead><tr><th>Day</th><th>Visitors</th><th>Trend</th></tr></thead>
+<tbody id="reportRows"></tbody>
+</table>
+</div>
+</section>
+
+<section class="page" id="settings">
+<h2>⚙️ Settings</h2>
+<div class="panel">
+<label>Daily Visitor Target
+<input type="number" id="target" min="1" max="1000000" value="100">
+</label>
+<button class="action" onclick="saveSettings()">💾 Save Settings</button>
+<button class="action gray" onclick="resetDashboard()">🔄 Reset Dashboard</button>
+<p id="settingsMessage"></p>
+</div>
+</section>
+</main>
+</div>
+
+<script>
+const API_URL = "https://xw5hgmwlebjpuak4bqzwm4nivy0qqwdr.lambda-url.us-east-1.on.aws";
+
+const days = ["6 Days Ago","5 Days Ago","4 Days Ago","3 Days Ago","2 Days Ago","Yesterday","Today"];
+let counts = [0,0,0,0,0,0,0];
+let dates = [];
+let inside = 0;
+let target = 100;
+let undoStack = [];
+let connected = false;
+
+function setConnection(text, ok) {
+  const el = document.getElementById("connectionStatus");
+  el.textContent = text;
+  el.style.color = ok ? "#bbf7d0" : "#fecaca";
+}
+
+async function apiRequest(path, method = "GET", body = null) {
+  const options = { method, mode: "cors" };
+  if (body !== null) {
+    // text/plain avoids a browser preflight request; Lambda still receives the JSON text.
+    options.headers = { "Content-Type": "text/plain;charset=UTF-8" };
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(API_URL + path, options);
+  if (!response.ok) throw new Error("AWS returned HTTP " + response.status);
+  return await response.json();
+}
+
+async function loadFromAWS() {
+  setConnection("Connecting to AWS Lambda and DynamoDB...", false);
+  try {
+    const data = await apiRequest("/counts");
+    if (!Array.isArray(data.days) || data.days.length !== 7 ||
+        typeof data.inside !== "number") {
+      throw new Error("Unexpected data received from AWS.");
+    }
+    counts = data.days.map(n => Number(n) || 0);
+    dates = Array.isArray(data.dates) ? data.dates : [];
+    inside = data.inside;
+    connected = true;
+    render();
+    renderReport();
+    showTrend("week");
+    setConnection("Connected to AWS — live data loaded", true);
+  } catch (error) {
+    connected = false;
+    setConnection("AWS connection problem: " + error.message, false);
+    message("Could not load AWS data. Check the Lambda Function URL CORS settings.");
+  }
+}
+
+function requireConnection() {
+  if (!connected) {
+    message("Not connected to AWS. Refresh after the connection is fixed.");
+    return false;
+  }
+  return true;
+}
+
+function showPage(id,btn){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  if(id==="reports")renderReport();
+  if(id==="trends")showTrend("week");
+}
+function navigate(id){
+  const buttons=[...document.querySelectorAll("nav button")];
+  const indexes={overview:0,trends:1,reports:2,settings:3};
+  showPage(id,buttons[indexes[id]]);
+}
+function addVisitor(){
+  if (!requireConnection()) return;
+  apiRequest("/visit", "POST", {}).then(() => {
+    undoStack.push("visit");
+    return loadFromAWS();
+  }).then(() => message("Visitor added and saved in AWS."))
+    .catch(error => message("Could not add visitor: " + error.message));
+}
+function removeVisitor(){
+  if (!requireConnection()) return;
+  if(inside<=0){message("No visitors are currently inside.");return;}
+  apiRequest("/exit", "POST", {}).then(() => {
+    undoStack.push("exit");
+    return loadFromAWS();
+  }).then(() => message("Visitor exit recorded and saved in AWS."))
+    .catch(error => message("Could not record exit: " + error.message));
+}
+function undoAction(){
+  if (!requireConnection()) return;
+  if(!undoStack.length){message("No action available to undo in this browser session.");return;}
+  const last = undoStack[undoStack.length - 1];
+  apiRequest("/undo", "POST", {last}).then(() => {
+    undoStack.pop();
+    return loadFromAWS();
+  }).then(() => message("Last action undone in AWS."))
+    .catch(error => message("Could not undo action: " + error.message));
+}
+function compareTrend(){
+  const diff=counts[6]-counts[5];
+  const text=diff>0?"Visitors increased by "+diff+" compared with yesterday.":
+  diff<0?"Visitors decreased by "+Math.abs(diff)+" compared with yesterday.":"Visitor numbers are unchanged.";
+  message(text);
+  navigate("trends");
+  showTrend("today");
+}
+function announceStatus(){
+  say("Today's visitor entries are "+counts[6]+". There are "+inside+" visitors inside.");
+  message("Announcing the current visitor status.");
+}
+function say(text){
+  if(!("speechSynthesis" in window)){message("Voice announcements are not supported by this browser.");return;}
+  speechSynthesis.cancel();
+  const utterance=new SpeechSynthesisUtterance(text);
+  utterance.lang="en-IN";
+  speechSynthesis.speak(utterance);
+}
+function message(text){document.getElementById("message").textContent=text;}
+function showTrend(type){
+  const result=document.getElementById("trendResult");
+  const bars=document.getElementById("trendBars");
+  if(type==="today"){
+   result.innerHTML="<h3>Today's entries: "+counts[6]+"</h3><p>"+(counts[6]>counts[5]?"Traffic is higher than yesterday.":counts[6]<counts[5]?"Traffic is lower than yesterday.":"Traffic is unchanged.")+"</p>";
+  }else if(type==="peak"){
+   const max=Math.max(...counts);
+   result.innerHTML="<h3>Busiest day: "+days[counts.indexOf(max)]+"</h3><p>"+max+" visitors recorded.</p>";
+  }else{
+   result.innerHTML="<h3>Seven-Day Visitor Comparison</h3><p>Total: "+counts.reduce((a,b)=>a+b,0)+" visitors</p>";
+  }
+  bars.innerHTML=counts.map((n,i)=>"<p>"+days[i]+" ("+(dates[i]||"")+") — "+n+" visitors</p><div class='bar'><span style='width:"+(n/Math.max(...counts,1)*100)+"%'></span></div>").join("");
+}
+function renderReport(){
+  document.getElementById("reportRows").innerHTML=counts.map((n,i)=>{
+    const prev=i?counts[i-1]:null;
+    const trend=prev===null?"—":n>prev?"Increased":n<prev?"Decreased":"Same";
+    return "<tr><td>"+days[i]+" ("+(dates[i]||"")+")</td><td>"+n+"</td><td>"+trend+"</td></tr>";
+  }).join("");
+}
+function downloadCSV(){
+  const rows=[["Day","Date","Visitors"],...days.map((d,i)=>[d,dates[i]||"",counts[i]])];
+  const csv=rows.map(r=>r.join(",")).join("\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download="visitor_report.csv";a.click();
+  URL.revokeObjectURL(url);
+}
+function saveSettings(){
+  const val=Number(document.getElementById("target").value);
+  if(!Number.isInteger(val)||val<1||val>1000000){
+    document.getElementById("settingsMessage").textContent="Enter a target from 1 to 1,000,000.";
+    return;
+  }
+  target=val;render();
+  document.getElementById("settingsMessage").textContent="Daily target saved in this browser.";
+}
+function resetDashboard(){
+  document.getElementById("settingsMessage").textContent =
+    "Visitor records are stored in AWS. This dashboard does not have a delete/reset API, so AWS visitor data was not changed.";
+}
+function render(){
+  document.getElementById("today").textContent=counts[6];
+  document.getElementById("inside").textContent=inside;
+  document.getElementById("yesterday").textContent=counts[5];
+  const diff=counts[6]-counts[5];
+  const pct=counts[5]===0?(diff===0?0:null):diff/counts[5]*100;
+  document.getElementById("change").textContent=pct===null?"N/A":(pct>0?"+":"")+pct.toFixed(1)+"%";
+  document.getElementById("direction").textContent=diff>0?"↑ Increased":diff<0?"↓ Decreased":"→ No change";
+  document.getElementById("capacityBar").style.width=Math.min(100,counts[6]/target*100)+"%";
+  document.getElementById("capacityText").textContent=Math.round(counts[6]/target*100)+"% of the daily target reached.";
+}
+document.getElementById("target").value=target;
+render();
+loadFromAWS();
+</script>
+</body>
+</html>
